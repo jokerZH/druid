@@ -40,7 +40,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class JdbcDataSourceStat implements JdbcDataSourceStatMBean {
-
     private final static Log                                    LOG                     = LogFactory.getLog(JdbcDataSourceStat.class);
 
     private final String                                        name;
