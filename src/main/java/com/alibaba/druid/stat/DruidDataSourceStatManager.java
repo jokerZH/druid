@@ -41,24 +41,13 @@ import java.util.concurrent.atomic.AtomicLong;
 
 @SuppressWarnings("rawtypes")
 public class DruidDataSourceStatManager implements DruidDataSourceStatManagerMBean {
+    private final static Log                        LOG            = LogFactory.getLog(DruidDataSourceStatManager.class);
+    private final static DruidDataSourceStatManager instance       = new DruidDataSourceStatManager();
+    public static DruidDataSourceStatManager getInstance() { return instance; }
 
-    public final static String                      SYS_PROP_INSTANCES             = "druid.dataSources";
-    public final static String                      SYS_PROP_REGISTER_SYS_PROPERTY = "druid.registerToSysProperty";
 
-    private final static Log                        LOG                            = LogFactory.getLog(DruidDataSourceStatManager.class);
-
-    private final static DruidDataSourceStatManager instance                       = new DruidDataSourceStatManager();
-
-    private final AtomicLong                        resetCount                     = new AtomicLong();
-
-    // global instances
-    private static volatile IdentityHashMap         dataSources;
-
-    private final static String                     MBEAN_NAME                     = "com.alibaba.druid:type=DruidDataSourceStat";
-
-    public static DruidDataSourceStatManager getInstance() {
-        return instance;
-    }
+    private final AtomicLong                        resetCount     = new AtomicLong();
+    private static volatile IdentityHashMap         dataSources;    // global instances
 
     public static void clear() {
         IdentityHashMap<Object, ObjectName> dataSources = getInstances();
@@ -83,8 +72,9 @@ public class DruidDataSourceStatManager implements DruidDataSourceStatManagerMBe
         }
     }
 
+    /* 获得Map，并保存在datasources中 */
     @SuppressWarnings("unchecked")
-    public static IdentityHashMap<Object, ObjectName> getInstances() {
+    public static IdentityHashMap<Object/*datasource*/, ObjectName> getInstances() {
         IdentityHashMap<Object, ObjectName> tmp = dataSources;
         if (tmp == null) {
             synchronized (DruidDataSourceStatManager.class) {
@@ -102,11 +92,15 @@ public class DruidDataSourceStatManager implements DruidDataSourceStatManagerMBe
         return dataSources;
     }
 
+    /* TODO 是否啥 */
+    public final static String SYS_PROP_REGISTER_SYS_PROPERTY = "druid.registerToSysProperty";
     public static boolean isRegisterToSystemProperty() {
         String value = System.getProperty(SYS_PROP_REGISTER_SYS_PROPERTY);
         return "true".equals(value);
     }
 
+    /* 从系统变量中获得map，如果没有，则返回空map */
+    public final static String SYS_PROP_INSTANCES = "druid.dataSources";
     @SuppressWarnings("unchecked")
     static IdentityHashMap<Object, ObjectName> getInstances0() {
         Properties properties = System.getProperties();
@@ -126,6 +120,7 @@ public class DruidDataSourceStatManager implements DruidDataSourceStatManagerMBe
         return instances;
     }
 
+    private final static String MBEAN_NAME = "com.alibaba.druid:type=DruidDataSourceStat";
     public synchronized static ObjectName addDataSource(Object dataSource, String name) {
         final IdentityHashMap<Object, ObjectName> instances = getInstances();
 
@@ -276,6 +271,7 @@ public class DruidDataSourceStatManager implements DruidDataSourceStatManagerMBe
 
     private static CompositeType COMPOSITE_TYPE = null;
 
+    // 构建一个mbean类型，相当于c的数据结构
     public static CompositeType getDruidDataSourceCompositeType() throws JMException {
 
         if (COMPOSITE_TYPE != null) {

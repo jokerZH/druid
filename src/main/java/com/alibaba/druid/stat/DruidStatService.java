@@ -41,11 +41,8 @@ import com.alibaba.druid.util.StringUtils;
 
 /**
  * 注意：避免直接调用Druid相关对象例如DruidDataSource等，相关调用要到DruidStatManagerFacade里用反射实现
- * 
- * @author sandzhang<sandzhangtoo@gmail.com>
  */
 public final class DruidStatService implements DruidStatServiceMBean {
-
     private final static Log              LOG                    = LogFactory.getLog(DruidStatService.class);
 
     public final static String            MBEAN_NAME             = "com.alibaba.druid:type=DruidStatService";

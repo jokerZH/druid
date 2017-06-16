@@ -73,6 +73,7 @@ public class DruidDataSourceUtils {
         }
     }
 
+    /* 根据datasource获得对应的objectName */
     public static ObjectName getObjectName(Object druidDataSource) {
         if (druidDataSource.getClass() == DruidDataSource.class) {
             return ((DruidDataSource) druidDataSource).getObjectName();
