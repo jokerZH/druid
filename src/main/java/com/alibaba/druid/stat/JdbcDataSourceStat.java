@@ -49,10 +49,11 @@ public class JdbcDataSourceStat implements JdbcDataSourceStatMBean {
     private final JdbcResultSetStat resultSetStat = new JdbcResultSetStat();
     private final JdbcStatementStat statementStat = new JdbcStatementStat();
 
-    private int maxSqlSize = 1000;
+    private int maxSqlSize = 1000;  // 最大统计的sql数目
     private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-    private final LinkedHashMap<String, JdbcSqlStat> sqlStatMap;
-    private final AtomicLong skipSqlCount            = new AtomicLong();
+    private final LinkedHashMap<String/*sql模版*/, JdbcSqlStat> sqlStatMap;
+    private final AtomicLong skipSqlCount = new AtomicLong(); // 由于maxSqlSize而丢弃的统计中有个sql正在执行 的次数
+    // 连接占用时间的计数
     private final Histogram connectionHoldHistogram = new Histogram(new long[] { 1, 10, 100, 1000, 10 * 1000, 100 * 1000, 1000 * 1000 });
     private final ConcurrentMap<Long, JdbcConnectionEntry>      connections             = new ConcurrentHashMap<Long, JdbcConnectionEntry>(16, 0.75f, 1);
     private final AtomicLong                                    clobOpenCount           = new AtomicLong();
@@ -118,10 +119,7 @@ public class JdbcDataSourceStat implements JdbcDataSourceStatMBean {
         };
     }
 
-    public int getMaxSqlSize() {
-        return this.maxSqlSize;
-    }
-
+    public int getMaxSqlSize() { return this.maxSqlSize; }
     public void setMaxSqlSize(int value) {
         if (value == this.maxSqlSize) {
             return;
@@ -148,22 +146,10 @@ public class JdbcDataSourceStat implements JdbcDataSourceStatMBean {
         }
     }
 
-    public String getDbType() {
-        return dbType;
-    }
-
-    public void setDbType(String dbType) {
-        this.dbType = dbType;
-    }
-
-    public long getSkipSqlCount() {
-        return skipSqlCount.get();
-    }
-
-    public long getSkipSqlCountAndReset() {
-        return skipSqlCount.getAndSet(0);
-    }
-
+    public String getDbType() { return dbType; }
+    public void setDbType(String dbType) { this.dbType = dbType; }
+    public long getSkipSqlCount() { return skipSqlCount.get(); }
+    public long getSkipSqlCountAndReset() { return skipSqlCount.getAndSet(0); }
     public void reset() {
         if (!isResetStatEnable()) {
             return;
@@ -195,26 +181,15 @@ public class JdbcDataSourceStat implements JdbcDataSourceStatMBean {
             lock.writeLock().unlock();
         }
 
-        for (JdbcConnectionStat.Entry connectionStat : connections.values()) {
+        for (JdbcConnectionEntry connectionStat : connections.values()) {
             connectionStat.reset();
         }
     }
 
-    public Histogram getConnectionHoldHistogram() {
-        return connectionHoldHistogram;
-    }
-
-    public JdbcConnectionStat getConnectionStat() {
-        return connectionStat;
-    }
-
-    public JdbcResultSetStat getResultSetStat() {
-        return resultSetStat;
-    }
-
-    public JdbcStatementStat getStatementStat() {
-        return statementStat;
-    }
+    public Histogram getConnectionHoldHistogram() { return connectionHoldHistogram; }
+    public JdbcConnectionStat getConnectionStat() { return connectionStat; }
+    public JdbcResultSetStat getResultSetStat() { return resultSetStat; }
+    public JdbcStatementStat getStatementStat() { return statementStat; }
 
     @Override
     public String getConnectionUrl() {
@@ -247,10 +222,7 @@ public class JdbcDataSourceStat implements JdbcDataSourceStatMBean {
         return null;
     }
 
-    public JdbcSqlStat getSqlStat(int id) {
-        return getSqlStat((long) id);
-    }
-
+    public JdbcSqlStat getSqlStat(int id) { return getSqlStat((long) id); }
     public JdbcSqlStat getSqlStat(long id) {
         lock.readLock().lock();
         try {
@@ -266,20 +238,20 @@ public class JdbcDataSourceStat implements JdbcDataSourceStatMBean {
         }
     }
 
-    public final ConcurrentMap<Long, JdbcConnectionStat.Entry> getConnections() {
+    public final ConcurrentMap<Long, JdbcConnectionEntry> getConnections() {
         return connections;
     }
 
     @Override
     public TabularData getConnectionList() throws JMException {
-        CompositeType rowType = JdbcConnectionStat.Entry.getCompositeType();
+        CompositeType rowType = JdbcConnectionEntry.getCompositeType();
         String[] indexNames = rowType.keySet().toArray(new String[rowType.keySet().size()]);
 
         TabularType tabularType = new TabularType("ConnectionListStatistic", "ConnectionListStatistic", rowType,
                                                   indexNames);
         TabularData data = new TabularDataSupport(tabularType);
 
-        for (Map.Entry<Long, JdbcConnectionStat.Entry> entry : getConnections().entrySet()) {
+        for (Map.Entry<Long, JdbcConnectionEntry> entry : getConnections().entrySet()) {
             data.put(entry.getValue().getCompositeData());
         }
 
@@ -395,7 +367,7 @@ public class JdbcDataSourceStat implements JdbcDataSourceStatMBean {
         long nowNano = System.nanoTime();
         long aliveNanoSpan = this.getConnectionStat().getAliveTotal();
 
-        for (JdbcConnectionStat.Entry connection : connections.values()) {
+        for (JdbcConnectionEntry connection : connections.values()) {
             aliveNanoSpan += nowNano - connection.getEstablishNano();
         }
         return aliveNanoSpan / (1000 * 1000);
@@ -405,7 +377,7 @@ public class JdbcDataSourceStat implements JdbcDataSourceStatMBean {
         long max = this.getConnectionStat().getAliveNanoMax();
 
         long nowNano = System.nanoTime();
-        for (JdbcConnectionStat.Entry connection : connections.values()) {
+        for (JdbcConnectionEntry connection : connections.values()) {
             long connectionAliveNano = nowNano - connection.getEstablishNano();
             if (connectionAliveNano > max) {
                 max = connectionAliveNano;
@@ -418,7 +390,7 @@ public class JdbcDataSourceStat implements JdbcDataSourceStatMBean {
         long min = this.getConnectionStat().getAliveNanoMin();
 
         long nowNano = System.nanoTime();
-        for (JdbcConnectionStat.Entry connection : connections.values()) {
+        for (JdbcConnectionEntry connection : connections.values()) {
             long connectionAliveNano = nowNano - connection.getEstablishNano();
             if (connectionAliveNano < min || min == 0) {
                 min = connectionAliveNano;
@@ -427,36 +399,12 @@ public class JdbcDataSourceStat implements JdbcDataSourceStatMBean {
         return min / (1000 * 1000);
     }
 
-    public long[] getConnectionHistogramRanges() {
-        return connectionStat.getHistogramRanges();
-    }
-
-    public long[] getConnectionHistogramValues() {
-        return connectionStat.getHistorgramValues();
-    }
-
-    public long getClobOpenCount() {
-        return clobOpenCount.get();
-    }
-
-    public long getClobOpenCountAndReset() {
-        return clobOpenCount.getAndSet(0);
-    }
-
-    public void incrementClobOpenCount() {
-        clobOpenCount.incrementAndGet();
-    }
-
-    public long getBlobOpenCount() {
-        return blobOpenCount.get();
-    }
-
-    public long getBlobOpenCountAndReset() {
-        return blobOpenCount.getAndSet(0);
-    }
-
-    public void incrementBlobOpenCount() {
-        blobOpenCount.incrementAndGet();
-    }
-
+    public long[] getConnectionHistogramRanges() { return connectionStat.getHistogramRanges(); }
+    public long[] getConnectionHistogramValues() { return connectionStat.getHistorgramValues(); }
+    public long getClobOpenCount() { return clobOpenCount.get(); }
+    public long getClobOpenCountAndReset() { return clobOpenCount.getAndSet(0); }
+    public void incrementClobOpenCount() { clobOpenCount.incrementAndGet(); }
+    public long getBlobOpenCount() { return blobOpenCount.get(); }
+    public long getBlobOpenCountAndReset() { return blobOpenCount.getAndSet(0); }
+    public void incrementBlobOpenCount() { blobOpenCount.incrementAndGet(); }
 }

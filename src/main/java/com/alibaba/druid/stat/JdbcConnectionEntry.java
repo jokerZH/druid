@@ -16,7 +16,7 @@ import javax.management.openmbean.SimpleType;
 import com.alibaba.druid.util.JMXUtils;
 
 
-/* TODO */
+/* 统计connect */
 public class JdbcConnectionEntry implements JdbcConnectionEntryMBean {
     private long id;
     private long establishTime;

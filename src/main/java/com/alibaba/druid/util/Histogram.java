@@ -18,8 +18,8 @@ package com.alibaba.druid.util;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLongArray;
 
+/* 统计各个区间的样本个数 */
 public class Histogram {
-
     private final long[]          ranges;
     private final AtomicLongArray rangeCounters;
 
@@ -28,6 +28,7 @@ public class Histogram {
         this.rangeCounters = new AtomicLongArray(ranges.length + 1);
     }
 
+    /* 创建长度为rangeCount的数据，然后内容是10的n次方 */
     public static Histogram makeHistogram(int rangeCount) {
         long[] rangeValues = new long[rangeCount];
 
@@ -38,6 +39,8 @@ public class Histogram {
         return new Histogram(rangeValues);
     }
 
+
+    /* 时间 */
     public Histogram(TimeUnit timeUnit, long... ranges){
         this.ranges = new long[ranges.length];
         for (int i = 0; i < ranges.length; i++) {
@@ -47,12 +50,14 @@ public class Histogram {
         rangeCounters = new AtomicLongArray(ranges.length + 1);
     }
 
+    /* 重置 */
     public void reset() {
         for (int i = 0; i < rangeCounters.length(); i++) {
             rangeCounters.set(i, 0);
         }
     }
 
+    /* 统计时间数据，将mills对应的槽+1 */
     public void record(long millis) {
         int index = rangeCounters.length() - 1;
         for (int i = 0; i < ranges.length; ++i) {

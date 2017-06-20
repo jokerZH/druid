@@ -27,11 +27,10 @@ import com.alibaba.druid.support.monitor.annotation.MTable;
 import com.alibaba.druid.util.JMXUtils;
 import com.alibaba.druid.util.Utils;
 
+/* 一个sql的统计结果 */
 @MTable(name = "druid_sql")
 public class JdbcSqlStatValue {
-
     protected long      id;
-
     protected String    sql;
 
     @MField(groupBy = true, aggregate = AggregateType.None, hashFor = "sql", hashForType="sql")

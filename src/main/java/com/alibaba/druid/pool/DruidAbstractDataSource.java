@@ -67,202 +67,184 @@ import com.alibaba.druid.util.JdbcUtils;
 import com.alibaba.druid.util.StringUtils;
 import com.alibaba.druid.util.Utils;
 
-/**
- * @author wenshao<szujobs@hotmail.com>
- * @author ljw<ljw2083@alibaba-inc.com>
- */
-public abstract class DruidAbstractDataSource extends WrapperAdapter implements DruidAbstractDataSourceMBean, DataSource, DataSourceProxy, Serializable {
+/* TODO 主要保存统计相关的数据  */
+public abstract class DruidAbstractDataSource extends WrapperAdapter
+        implements DruidAbstractDataSourceMBean,
+                    DataSource,
+                    DataSourceProxy,
+                    Serializable {
 
-    private final static Log                           LOG                                       = LogFactory.getLog(DruidAbstractDataSource.class);
+    private final static Log LOG = LogFactory.getLog(DruidAbstractDataSource.class);
+    private static final long serialVersionUID = 1L;
 
-    private static final long                          serialVersionUID                          = 1L;
+    public final static int DEFAULT_INITIAL_SIZE = 0;
+    public final static int DEFAULT_MAX_ACTIVE_SIZE = 8;
+    public final static int DEFAULT_MAX_IDLE = 8;
+    public final static int DEFAULT_MIN_IDLE = 0;
+    public final static int DEFAULT_MAX_WAIT = -1;
+    public final static String DEFAULT_VALIDATION_QUERY = null;                                                //
+    public final static boolean DEFAULT_TEST_ON_BORROW = false;
+    public final static boolean DEFAULT_TEST_ON_RETURN = false;
+    public final static boolean DEFAULT_WHILE_IDLE = true;
+    public static final long DEFAULT_TIME_BETWEEN_EVICTION_RUNS_MILLIS = 60 * 1000L;
+    public static final long DEFAULT_TIME_BETWEEN_CONNECT_ERROR_MILLIS = 30 * 1000;
+    public static final int DEFAULT_NUM_TESTS_PER_EVICTION_RUN = 3;
+    public static final long DEFAULT_MIN_EVICTABLE_IDLE_TIME_MILLIS = 1000L * 60L * 30L;
 
-    public final static int                            DEFAULT_INITIAL_SIZE                      = 0;
-    public final static int                            DEFAULT_MAX_ACTIVE_SIZE                   = 8;
-    public final static int                            DEFAULT_MAX_IDLE                          = 8;
-    public final static int                            DEFAULT_MIN_IDLE                          = 0;
-    public final static int                            DEFAULT_MAX_WAIT                          = -1;
-    public final static String                         DEFAULT_VALIDATION_QUERY                  = null;                                                //
-    public final static boolean                        DEFAULT_TEST_ON_BORROW                    = false;
-    public final static boolean                        DEFAULT_TEST_ON_RETURN                    = false;
-    public final static boolean                        DEFAULT_WHILE_IDLE                        = true;
-    public static final long                           DEFAULT_TIME_BETWEEN_EVICTION_RUNS_MILLIS = 60 * 1000L;
-    public static final long                           DEFAULT_TIME_BETWEEN_CONNECT_ERROR_MILLIS = 30 * 1000;
-    public static final int                            DEFAULT_NUM_TESTS_PER_EVICTION_RUN        = 3;
+    protected volatile boolean defaultAutoCommit = true;
+    protected volatile Boolean defaultReadOnly;
+    protected volatile Integer defaultTransactionIsolation;
+    protected volatile String defaultCatalog = null;
 
-    /**
-     * The default value for {@link #getMinEvictableIdleTimeMillis}.
-     * 
-     * @see #getMinEvictableIdleTimeMillis
-     * @see #setMinEvictableIdleTimeMillis
-     */
-    public static final long                           DEFAULT_MIN_EVICTABLE_IDLE_TIME_MILLIS    = 1000L * 60L * 30L;
+    protected String name;
 
-    protected volatile boolean                         defaultAutoCommit                         = true;
-    protected volatile Boolean                         defaultReadOnly;
-    protected volatile Integer                         defaultTransactionIsolation;
-    protected volatile String                          defaultCatalog                            = null;
+    protected volatile String username;
+    protected volatile String password;
+    protected volatile String jdbcUrl;
+    protected volatile String driverClass;
+    protected volatile ClassLoader driverClassLoader;
+    protected volatile Properties connectProperties = new Properties();
 
-    protected String                                   name;
+    protected volatile PasswordCallback passwordCallback;   /* TODO 可能是解密算法 */
+    protected volatile NameCallback userCallback;           /* TODO */
 
-    protected volatile String                          username;
-    protected volatile String                          password;
-    protected volatile String                          jdbcUrl;
-    protected volatile String                          driverClass;
-    protected volatile ClassLoader                     driverClassLoader;
-    protected volatile Properties                      connectProperties                         = new Properties();
+    // 连接池相关
+    protected volatile int initialSize = DEFAULT_INITIAL_SIZE;
+    protected volatile int maxActive = DEFAULT_MAX_ACTIVE_SIZE;
+    protected volatile int minIdle = DEFAULT_MIN_IDLE;
+    protected volatile int maxIdle = DEFAULT_MAX_IDLE;
+    protected volatile long maxWait = DEFAULT_MAX_WAIT;
+    protected int notFullTimeoutRetryCount = 0;
 
-    protected volatile PasswordCallback                passwordCallback;
-    protected volatile NameCallback                    userCallback;
+    protected volatile String validationQuery = DEFAULT_VALIDATION_QUERY;
+    protected volatile int validationQueryTimeout = -1;
+    private volatile boolean testOnBorrow = DEFAULT_TEST_ON_BORROW;
+    private volatile boolean testOnReturn = DEFAULT_TEST_ON_RETURN;
+    private volatile boolean testWhileIdle = DEFAULT_WHILE_IDLE;
+    protected volatile boolean poolPreparedStatements = false;
+    protected volatile boolean sharePreparedStatements = false;
+    protected volatile int maxPoolPreparedStatementPerConnectionSize = 10;
 
-    protected volatile int                             initialSize                               = DEFAULT_INITIAL_SIZE;
-    protected volatile int                             maxActive                                 = DEFAULT_MAX_ACTIVE_SIZE;
-    protected volatile int                             minIdle                                   = DEFAULT_MIN_IDLE;
-    protected volatile int                             maxIdle                                   = DEFAULT_MAX_IDLE;
-    protected volatile long                            maxWait                                   = DEFAULT_MAX_WAIT;
-    protected int                                      notFullTimeoutRetryCount                  = 0;
+    protected volatile boolean inited = false;
 
-    protected volatile String                          validationQuery                           = DEFAULT_VALIDATION_QUERY;
-    protected volatile int                             validationQueryTimeout                    = -1;
-    private volatile boolean                           testOnBorrow                              = DEFAULT_TEST_ON_BORROW;
-    private volatile boolean                           testOnReturn                              = DEFAULT_TEST_ON_RETURN;
-    private volatile boolean                           testWhileIdle                             = DEFAULT_WHILE_IDLE;
-    protected volatile boolean                         poolPreparedStatements                    = false;
-    protected volatile boolean                         sharePreparedStatements                   = false;
-    protected volatile int                             maxPoolPreparedStatementPerConnectionSize = 10;
+    protected PrintWriter logWriter = new PrintWriter(System.out);
 
-    protected volatile boolean                         inited                                    = false;
+    protected List<Filter> filters = new CopyOnWriteArrayList<Filter>();
 
-    protected PrintWriter                              logWriter                                 = new PrintWriter(
-                                                                                                                   System.out);
+    private boolean clearFiltersEnable = true;
 
-    protected List<Filter>                             filters                                   = new CopyOnWriteArrayList<Filter>();
-    private boolean                                    clearFiltersEnable                        = true;
-    protected volatile ExceptionSorter                 exceptionSorter                           = null;
+    protected volatile ExceptionSorter exceptionSorter = null;
 
-    protected Driver                                   driver;
+    protected Driver driver;
 
-    protected volatile int                             queryTimeout;
-    protected volatile int                             transactionQueryTimeout;
+    protected volatile int queryTimeout;
 
-    protected AtomicLong                               createErrorCount                          = new AtomicLong();
+    protected volatile int transactionQueryTimeout;
 
-    protected long                                     createTimespan;
+    protected AtomicLong createErrorCount = new AtomicLong();
 
-    protected volatile int                             maxWaitThreadCount                        = -1;
+    protected long createTimespan;
 
-    protected volatile boolean                         accessToUnderlyingConnectionAllowed       = true;
+    protected volatile int maxWaitThreadCount = -1;
 
-    protected volatile long                            timeBetweenEvictionRunsMillis             = DEFAULT_TIME_BETWEEN_EVICTION_RUNS_MILLIS;
+    protected volatile boolean accessToUnderlyingConnectionAllowed = true;
 
-    protected volatile int                             numTestsPerEvictionRun                    = DEFAULT_NUM_TESTS_PER_EVICTION_RUN;
+    protected volatile long timeBetweenEvictionRunsMillis = DEFAULT_TIME_BETWEEN_EVICTION_RUNS_MILLIS;
 
-    protected volatile long                            minEvictableIdleTimeMillis                = DEFAULT_MIN_EVICTABLE_IDLE_TIME_MILLIS;
+    protected volatile int numTestsPerEvictionRun = DEFAULT_NUM_TESTS_PER_EVICTION_RUN;
 
-    protected volatile boolean                         removeAbandoned;
+    protected volatile long minEvictableIdleTimeMillis = DEFAULT_MIN_EVICTABLE_IDLE_TIME_MILLIS;
 
-    protected volatile long                            removeAbandonedTimeoutMillis              = 300 * 1000;
+    protected volatile boolean removeAbandoned;
 
-    protected volatile boolean                         logAbandoned;
+    protected volatile long removeAbandonedTimeoutMillis = 300 * 1000;
 
-    protected volatile int                             maxOpenPreparedStatements                 = -1;
+    protected volatile boolean logAbandoned;
 
-    protected volatile List<String>                    connectionInitSqls;
+    protected volatile int maxOpenPreparedStatements = -1;
 
-    protected volatile String                          dbType;
+    protected volatile List<String> connectionInitSqls;
 
-    protected volatile long                            timeBetweenConnectErrorMillis             = DEFAULT_TIME_BETWEEN_CONNECT_ERROR_MILLIS;
+    protected volatile String dbType;
 
-    protected volatile ValidConnectionChecker          validConnectionChecker                    = null;
+    protected volatile long timeBetweenConnectErrorMillis = DEFAULT_TIME_BETWEEN_CONNECT_ERROR_MILLIS;
 
-    protected final AtomicLong                         errorCount                                = new AtomicLong();
-    protected final AtomicLong                         dupCloseCount                             = new AtomicLong();
+    protected volatile ValidConnectionChecker validConnectionChecker = null;
 
-    protected final Map<DruidPooledConnection, Object> activeConnections                         = new IdentityHashMap<DruidPooledConnection, Object>();
-    protected final static Object                      PRESENT                                   = new Object();
+    protected final AtomicLong errorCount = new AtomicLong();
+    protected final AtomicLong dupCloseCount = new AtomicLong();
 
-    protected long                                     id;
+    protected final Map<DruidPooledConnection, Object> activeConnections = new IdentityHashMap<DruidPooledConnection, Object>();
+    protected final static Object PRESENT = new Object();
 
-    protected final Date                               createdTime                               = new Date();
-    protected Date                                     initedTime;
+    protected long id;
 
-    protected int                                      connectionErrorRetryAttempts              = 30;
+    protected final Date createdTime = new Date();
+    protected Date initedTime;
 
-    protected boolean                                  breakAfterAcquireFailure                  = false;
+    protected int connectionErrorRetryAttempts = 30;
 
-    protected long                                     transactionThresholdMillis                = 0L;
+    protected boolean breakAfterAcquireFailure = false;
 
-    protected final AtomicLong                         commitCount                               = new AtomicLong();
-    protected final AtomicLong                         startTransactionCount                     = new AtomicLong();
-    protected final AtomicLong                         rollbackCount                             = new AtomicLong();
-    protected final AtomicLong                         cachedPreparedStatementHitCount           = new AtomicLong();
-    protected final AtomicLong                         preparedStatementCount                    = new AtomicLong();
-    protected final AtomicLong                         closedPreparedStatementCount              = new AtomicLong();
-    protected final AtomicLong                         cachedPreparedStatementCount              = new AtomicLong();
-    protected final AtomicLong                         cachedPreparedStatementDeleteCount        = new AtomicLong();
-    protected final AtomicLong                         cachedPreparedStatementMissCount          = new AtomicLong();
+    protected long transactionThresholdMillis = 0L;
 
-    protected final Histogram                          transactionHistogram                      = new Histogram(1,
-                                                                                                                 10,
-                                                                                                                 100,
-                                                                                                                 1000,
-                                                                                                                 10 * 1000,
-                                                                                                                 100 * 1000);
+    protected final AtomicLong commitCount = new AtomicLong();
+    protected final AtomicLong startTransactionCount = new AtomicLong();
+    protected final AtomicLong rollbackCount = new AtomicLong();
+    protected final AtomicLong cachedPreparedStatementHitCount = new AtomicLong();
+    protected final AtomicLong preparedStatementCount = new AtomicLong();
+    protected final AtomicLong closedPreparedStatementCount = new AtomicLong();
+    protected final AtomicLong cachedPreparedStatementCount = new AtomicLong();
+    protected final AtomicLong cachedPreparedStatementDeleteCount = new AtomicLong();
+    protected final AtomicLong cachedPreparedStatementMissCount = new AtomicLong();
 
-    private boolean                                    dupCloseLogEnable                         = false;
+    protected final Histogram transactionHistogram = new Histogram(1, 10, 100, 1000, 10 * 1000, 100 * 1000);
 
-    private ObjectName                                 objectName;
+    private boolean dupCloseLogEnable = false;
 
-    protected final AtomicLong                         executeCount                              = new AtomicLong();
+    private ObjectName objectName;
 
-    protected volatile Throwable                       createError;
-    protected volatile Throwable                       lastError;
-    protected volatile long                            lastErrorTimeMillis;
-    protected volatile Throwable                       lastCreateError;
-    protected volatile long                            lastCreateErrorTimeMillis;
+    protected final AtomicLong executeCount = new AtomicLong();
 
-    protected boolean                                  isOracle                                  = false;
+    protected volatile Throwable createError;
+    protected volatile Throwable lastError;
+    protected volatile long lastErrorTimeMillis;
+    protected volatile Throwable lastCreateError;
+    protected volatile long lastCreateErrorTimeMillis;
 
-    protected boolean                                  useOracleImplicitCache                    = true;
+    protected boolean isOracle = false;
 
-    protected ReentrantLock                            lock;
-    protected Condition                                notEmpty;
-    protected Condition                                empty;
+    protected boolean useOracleImplicitCache = true;
 
-    protected AtomicLong                               createCount                               = new AtomicLong();
-    protected AtomicLong                               destroyCount                              = new AtomicLong();
+    protected ReentrantLock lock;
+    protected Condition notEmpty;
+    protected Condition empty;
 
-    private Boolean                                    useUnfairLock                             = null;
+    protected AtomicLong createCount = new AtomicLong();
+    protected AtomicLong destroyCount = new AtomicLong();
 
-    private boolean                                    useLocalSessionState                      = true;
+    private Boolean useUnfairLock = null;
 
-    protected long                                     timeBetweenLogStatsMillis;
-    protected DruidDataSourceStatLogger                statLogger                                = new DruidDataSourceStatLoggerImpl();
-    
-    private boolean                                    asyncCloseConnectionEnable                = false;
-    protected int                                      maxCreateTaskCount                        = 3;
-    protected ScheduledExecutorService                 destroyScheduler;
-    protected ScheduledExecutorService                 createScheduler;
+    private boolean useLocalSessionState = true;
 
-    public DruidAbstractDataSource(boolean lockFair){
+    protected long timeBetweenLogStatsMillis;
+    protected DruidDataSourceStatLogger statLogger = new DruidDataSourceStatLoggerImpl();
+
+    private boolean asyncCloseConnectionEnable = false;
+    protected int maxCreateTaskCount = 3;
+    protected ScheduledExecutorService destroyScheduler;
+    protected ScheduledExecutorService createScheduler;
+
+    public DruidAbstractDataSource(boolean lockFair) {
         lock = new ReentrantLock(lockFair);
 
         notEmpty = lock.newCondition();
         empty = lock.newCondition();
     }
 
-    public boolean isUseLocalSessionState() {
-        return useLocalSessionState;
-    }
-
-    public void setUseLocalSessionState(boolean useLocalSessionState) {
-        this.useLocalSessionState = useLocalSessionState;
-    }
-
-    public DruidDataSourceStatLogger getStatLogger() {
-        return statLogger;
-    }
-
+    public boolean isUseLocalSessionState() { return useLocalSessionState; }
+    public void setUseLocalSessionState(boolean useLocalSessionState) { this.useLocalSessionState = useLocalSessionState; }
+    public DruidDataSourceStatLogger getStatLogger() { return statLogger; }
     public void setStatLoggerClassName(String className) {
         Class<?> clazz;
         try {
@@ -274,22 +256,10 @@ public abstract class DruidAbstractDataSource extends WrapperAdapter implements 
         }
     }
 
-    public void setStatLogger(DruidDataSourceStatLogger statLogger) {
-        this.statLogger = statLogger;
-    }
-
-    public long getTimeBetweenLogStatsMillis() {
-        return timeBetweenLogStatsMillis;
-    }
-
-    public void setTimeBetweenLogStatsMillis(long timeBetweenLogStatsMillis) {
-        this.timeBetweenLogStatsMillis = timeBetweenLogStatsMillis;
-    }
-
-    public boolean isOracle() {
-        return isOracle;
-    }
-
+    public void setStatLogger(DruidDataSourceStatLogger statLogger) { this.statLogger = statLogger; }
+    public long getTimeBetweenLogStatsMillis() { return timeBetweenLogStatsMillis; }
+    public void setTimeBetweenLogStatsMillis(long timeBetweenLogStatsMillis) { this.timeBetweenLogStatsMillis = timeBetweenLogStatsMillis; }
+    public boolean isOracle() { return isOracle; }
     public void setOracle(boolean isOracle) {
         if (inited) {
             throw new IllegalStateException();
@@ -297,10 +267,7 @@ public abstract class DruidAbstractDataSource extends WrapperAdapter implements 
         this.isOracle = isOracle;
     }
 
-    public boolean isUseUnfairLock() {
-        return lock.isFair();
-    }
-
+    public boolean isUseUnfairLock() { return lock.isFair(); }
     public void setUseUnfairLock(boolean useUnfairLock) {
         if (lock.isFair() == !useUnfairLock) {
             return;
@@ -323,10 +290,7 @@ public abstract class DruidAbstractDataSource extends WrapperAdapter implements 
         }
     }
 
-    public boolean isUseOracleImplicitCache() {
-        return useOracleImplicitCache;
-    }
-
+    public boolean isUseOracleImplicitCache() { return useOracleImplicitCache; }
     public void setUseOracleImplicitCache(boolean useOracleImplicitCache) {
         if (this.useOracleImplicitCache != useOracleImplicitCache) {
             this.useOracleImplicitCache = useOracleImplicitCache;
@@ -828,10 +792,10 @@ public abstract class DruidAbstractDataSource extends WrapperAdapter implements 
     /**
      * Retrieves the number of seconds the driver will wait for a <code>Statement</code> object to execute. If the limit
      * is exceeded, a <code>SQLException</code> is thrown.
-     * 
+     *
      * @return the current query timeout limit in seconds; zero means there is no limit
-     * @exception SQLException if a database access error occurs or this method is called on a closed
-     * <code>Statement</code>
+     * @throws SQLException if a database access error occurs or this method is called on a closed
+     *                      <code>Statement</code>
      * @see #setQueryTimeout
      */
     public int getQueryTimeout() {
@@ -844,10 +808,10 @@ public abstract class DruidAbstractDataSource extends WrapperAdapter implements 
      * this limit to the <code>execute</code>, <code>executeQuery</code> and <code>executeUpdate</code> methods. JDBC
      * driver implementations may also apply this limit to <code>ResultSet</code> methods (consult your driver vendor
      * documentation for details).
-     * 
+     *
      * @param seconds the new query timeout limit in seconds; zero means there is no limit
-     * @exception SQLException if a database access error occurs, this method is called on a closed
-     * <code>Statement</code> or the condition seconds >= 0 is not satisfied
+     * @throws SQLException if a database access error occurs, this method is called on a closed
+     *                      <code>Statement</code> or the condition seconds >= 0 is not satisfied
      * @see #getQueryTimeout
      */
     public void setQueryTimeout(int seconds) {
@@ -900,12 +864,12 @@ public abstract class DruidAbstractDataSource extends WrapperAdapter implements 
 
         this.maxWait = maxWaitMillis;
     }
-    
+
     public int getNotFullTimeoutRetryCount() {
         return notFullTimeoutRetryCount;
     }
 
-    
+
     public void setNotFullTimeoutRetryCount(int notFullTimeoutRetryCount) {
         this.notFullTimeoutRetryCount = notFullTimeoutRetryCount;
     }
@@ -1327,11 +1291,11 @@ public abstract class DruidAbstractDataSource extends WrapperAdapter implements 
         this.clearFiltersEnable = clearFiltersEnable;
     }
 
-    protected final AtomicLong connectionIdSeed  = new AtomicLong(10000);
-    protected final AtomicLong statementIdSeed   = new AtomicLong(20000);
-    protected final AtomicLong resultSetIdSeed   = new AtomicLong(50000);
+    protected final AtomicLong connectionIdSeed = new AtomicLong(10000);
+    protected final AtomicLong statementIdSeed = new AtomicLong(20000);
+    protected final AtomicLong resultSetIdSeed = new AtomicLong(50000);
     protected final AtomicLong transactionIdSeed = new AtomicLong(60000);
-    protected final AtomicLong metaDataIdSeed    = new AtomicLong(80000);
+    protected final AtomicLong metaDataIdSeed = new AtomicLong(80000);
 
     public long createConnectionId() {
         return connectionIdSeed.incrementAndGet();
@@ -1365,7 +1329,7 @@ public abstract class DruidAbstractDataSource extends WrapperAdapter implements 
     }
 
     public abstract void handleConnectionException(DruidPooledConnection pooledConnection, Throwable t)
-                                                                                                       throws SQLException;
+            throws SQLException;
 
     protected abstract void recycle(DruidPooledConnection pooledConnection) throws SQLException;
 
@@ -1687,9 +1651,9 @@ public abstract class DruidAbstractDataSource extends WrapperAdapter implements 
         to.createScheduler = this.createScheduler;
         to.destroyScheduler = this.destroyScheduler;
     }
-    
+
     public abstract void discardConnection(Connection realConnection);
-    
+
 
     public boolean isAsyncCloseConnectionEnable() {
         if (isRemoveAbandoned()) {
@@ -1705,7 +1669,7 @@ public abstract class DruidAbstractDataSource extends WrapperAdapter implements 
     public ScheduledExecutorService getCreateScheduler() {
         return createScheduler;
     }
-    
+
     public void setCreateScheduler(ScheduledExecutorService createScheduler) {
         if (isInited()) {
             throw new DruidRuntimeException("dataSource inited.");
@@ -1717,7 +1681,7 @@ public abstract class DruidAbstractDataSource extends WrapperAdapter implements 
         return destroyScheduler;
     }
 
-    
+
     public void setDestroyScheduler(ScheduledExecutorService destroyScheduler) {
         if (isInited()) {
             throw new DruidRuntimeException("dataSource inited.");
@@ -1729,17 +1693,17 @@ public abstract class DruidAbstractDataSource extends WrapperAdapter implements 
         return this.inited;
     }
 
-    
+
     public int getMaxCreateTaskCount() {
         return maxCreateTaskCount;
     }
 
-    
+
     public void setMaxCreateTaskCount(int maxCreateTaskCount) {
         if (maxCreateTaskCount < 1) {
             throw new IllegalArgumentException();
         }
-        
+
         this.maxCreateTaskCount = maxCreateTaskCount;
     }
 }

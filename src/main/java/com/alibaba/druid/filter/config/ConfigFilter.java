@@ -58,15 +58,15 @@ import com.alibaba.druid.util.StringUtils;
   @author Jonas Yang
  */
 public class ConfigFilter extends FilterAdapter {
-    private static Log         LOG                     = LogFactory.getLog(ConfigFilter.class);
+    private static Log LOG = LogFactory.getLog(ConfigFilter.class);
 
-    public static final String CONFIG_FILE             = "config.file";
-    public static final String CONFIG_DECRYPT          = "config.decrypt";
-    public static final String CONFIG_KEY              = "config.decrypt.key";
+    public static final String CONFIG_FILE = "config.file";
+    public static final String CONFIG_DECRYPT = "config.decrypt";
+    public static final String CONFIG_KEY = "config.decrypt.key";
 
-    public static final String SYS_PROP_CONFIG_FILE    = "druid.config.file";
+    public static final String SYS_PROP_CONFIG_FILE = "druid.config.file";
     public static final String SYS_PROP_CONFIG_DECRYPT = "druid.config.decrypt";
-    public static final String SYS_PROP_CONFIG_KEY     = "druid.config.decrypt.key";
+    public static final String SYS_PROP_CONFIG_KEY = "druid.config.decrypt.key";
 
     public ConfigFilter(){ }
 

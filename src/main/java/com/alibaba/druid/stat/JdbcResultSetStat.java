@@ -20,7 +20,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class JdbcResultSetStat implements JdbcResultSetStatMBean {
-
     private final AtomicInteger openingCount   = new AtomicInteger();
     private final AtomicInteger openingMax     = new AtomicInteger();
 
@@ -70,21 +69,10 @@ public class JdbcResultSetStat implements JdbcResultSetStatMBean {
         lastOpenTime = System.currentTimeMillis();
     }
 
-    public long getErrorCount() {
-        return errorCount.get();
-    }
-
-    public int getOpeningCount() {
-        return openingCount.get();
-    }
-
-    public int getOpeningMax() {
-        return openingMax.get();
-    }
-
-    public long getOpenCount() {
-        return openCount.get();
-    }
+    public long getErrorCount() { return errorCount.get(); }
+    public int getOpeningCount() { return openingCount.get(); }
+    public int getOpeningMax() { return openingMax.get(); }
+    public long getOpenCount() { return openCount.get(); }
 
     public Date getLastOpenTime() {
         if (lastOpenTime == 0) {
@@ -94,21 +82,10 @@ public class JdbcResultSetStat implements JdbcResultSetStatMBean {
         return new Date(lastOpenTime);
     }
 
-    public long getAliveNanoTotal() {
-        return aliveNanoTotal.get();
-    }
-
-    public long getAliveMillisTotal() {
-        return aliveNanoTotal.get() / (1000 * 1000);
-    }
-
-    public long getAliveMilisMin() {
-        return aliveNanoMin.get() / (1000 * 1000);
-    }
-
-    public long getAliveMilisMax() {
-        return aliveNanoMax.get() / (1000 * 1000);
-    }
+    public long getAliveNanoTotal() { return aliveNanoTotal.get(); }
+    public long getAliveMillisTotal() { return aliveNanoTotal.get() / (1000 * 1000); }
+    public long getAliveMilisMin() { return aliveNanoMin.get() / (1000 * 1000); }
+    public long getAliveMilisMax() { return aliveNanoMax.get() / (1000 * 1000); }
 
     public void afterClose(long aliveNano) {
         openingCount.decrementAndGet();
@@ -138,9 +115,7 @@ public class JdbcResultSetStat implements JdbcResultSetStatMBean {
         }
     }
 
-    public Throwable getLastError() {
-        return lastError;
-    }
+    public Throwable getLastError() { return lastError; }
 
     public Date getLastErrorTime() {
         if (lastErrorTime <= 0) {
@@ -157,26 +132,13 @@ public class JdbcResultSetStat implements JdbcResultSetStatMBean {
     }
 
     @Override
-    public long getHoldMillisTotal() {
-        return getAliveNanoTotal() / (1000 * 1000);
-    }
+    public long getHoldMillisTotal() { return getAliveNanoTotal() / (1000 * 1000); }
 
     @Override
-    public long getFetchRowCount() {
-        return fetchRowCount.get();
-    }
+    public long getFetchRowCount() { return fetchRowCount.get(); }
 
     @Override
-    public long getCloseCount() {
-        return closeCount.get();
-    }
-
-    public void addFetchRowCount(long fetchCount) {
-        fetchRowCount.addAndGet(fetchCount);
-    }
-
-    public void incrementCloseCounter() {
-        closeCount.incrementAndGet();
-    }
-
+    public long getCloseCount() { return closeCount.get(); }
+    public void addFetchRowCount(long fetchCount) { fetchRowCount.addAndGet(fetchCount); }
+    public void incrementCloseCounter() { closeCount.incrementAndGet(); }
 }
