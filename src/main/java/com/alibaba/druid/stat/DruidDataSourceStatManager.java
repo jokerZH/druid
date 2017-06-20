@@ -208,6 +208,7 @@ public class DruidDataSourceStatManager implements DruidDataSourceStatManagerMBe
         return dataSources.keySet();
     }
 
+    /* 重置各个datasource的统计信息 */
     public void reset() {
         IdentityHashMap<Object, ObjectName> dataSources = getInstances();
 
@@ -225,6 +226,7 @@ public class DruidDataSourceStatManager implements DruidDataSourceStatManagerMBe
         }
     }
 
+    /* 纪录并重置dataSource的统计信息 */
     public void logAndResetDataSource() {
         IdentityHashMap<Object, ObjectName> dataSources = getInstances();
 
@@ -261,6 +263,7 @@ public class DruidDataSourceStatManager implements DruidDataSourceStatManagerMBe
         return data;
     }
 
+    /* 获得某一个dataSource的数据 */
     public CompositeDataSupport getCompositeData(Object dataSource) throws JMException {
         CompositeType rowType = getDruidDataSourceCompositeType();
 

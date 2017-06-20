@@ -23,85 +23,34 @@ import javax.security.auth.callback.PasswordCallback;
 
 import com.alibaba.druid.filter.Filter;
 
-/**
- * @author wenshao<szujobs@hotmail.com>
- */
+/* 一个dataSource的配置 */
 public class DataSourceProxyConfig {
 
-    private String             rawUrl;
-    private String             url;
-    private String             rawDriverClassName;
-    private String             name;
-    private boolean            jmx;
+    private String             rawUrl;              // 原先的url
+    private String             url;                 // 实际使用的url
+    private String             rawDriverClassName;  // 后段驱动 如mysql driver
+    private String             name;                // dataSource名字
+    private boolean            jmx;                 // 是否使用jmx
 
     private PasswordCallback   passwordCallback;
     private NameCallback       userCallback;
-    private final List<Filter> filters = new ArrayList<Filter>();
+    private final List<Filter> filters = new ArrayList<Filter>();   // 用到的filter类
 
-    public DataSourceProxyConfig(){
-    }
-
-    public boolean isJmxOption() {
-        return jmx;
-    }
-
-    public void setJmxOption(boolean jmx) {
-        this.jmx = jmx;
-    }
-
-    public void setJmxOption(String jmx) {
-        this.jmx = Boolean.parseBoolean(jmx);
-    }
-
-    public PasswordCallback getPasswordCallback() {
-        return passwordCallback;
-    }
-
-    public void setPasswordCallback(PasswordCallback passwordCallback) {
-        this.passwordCallback = passwordCallback;
-    }
-
-    public NameCallback getUserCallback() {
-        return userCallback;
-    }
-
-    public void setUserCallback(NameCallback userCallback) {
-        this.userCallback = userCallback;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public List<Filter> getFilters() {
-        return filters;
-    }
-
-    public String getRawUrl() {
-        return rawUrl;
-    }
-
-    public void setRawUrl(String rawUrl) {
-        this.rawUrl = rawUrl;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public String getRawDriverClassName() {
-        return rawDriverClassName;
-    }
-
-    public void setRawDriverClassName(String driverClassName) {
-        this.rawDriverClassName = driverClassName;
-    }
+    public DataSourceProxyConfig(){ }
+    public boolean isJmxOption() { return jmx; }
+    public void setJmxOption(boolean jmx) { this.jmx = jmx; }
+    public void setJmxOption(String jmx) { this.jmx = Boolean.parseBoolean(jmx); }
+    public PasswordCallback getPasswordCallback() { return passwordCallback; }
+    public void setPasswordCallback(PasswordCallback passwordCallback) { this.passwordCallback = passwordCallback; }
+    public NameCallback getUserCallback() { return userCallback; }
+    public void setUserCallback(NameCallback userCallback) { this.userCallback = userCallback; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public List<Filter> getFilters() { return filters; }
+    public String getRawUrl() { return rawUrl; }
+    public void setRawUrl(String rawUrl) { this.rawUrl = rawUrl; }
+    public String getUrl() { return url; }
+    public void setUrl(String url) { this.url = url; }
+    public String getRawDriverClassName() { return rawDriverClassName; }
+    public void setRawDriverClassName(String driverClassName) { this.rawDriverClassName = driverClassName; }
 }

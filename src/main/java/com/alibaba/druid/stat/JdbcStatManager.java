@@ -34,57 +34,30 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 public final class JdbcStatManager implements JdbcStatManagerMBean {
-
     private final AtomicLong                  sqlIdSeed      = new AtomicLong(1000);
 
     private final static JdbcStatManager      instance       = new JdbcStatManager();
+    private JdbcStatManager(){ }
+    public static JdbcStatManager getInstance() { return instance; }
+
 
     private final JdbcConnectionStat          connectionStat = new JdbcConnectionStat();
     private final JdbcResultSetStat           resultSetStat  = new JdbcResultSetStat();
     private final JdbcStatementStat           statementStat  = new JdbcStatementStat();
+    public final ThreadLocal<JdbcStatContext> contextLocal   = new ThreadLocal<JdbcStatContext>();
 
     private final AtomicLong                  resetCount     = new AtomicLong();
 
-    public final ThreadLocal<JdbcStatContext> contextLocal   = new ThreadLocal<JdbcStatContext>();
 
-    private JdbcStatManager(){
-
-    }
-
-    public JdbcStatContext getStatContext() {
-        return contextLocal.get();
-    }
-
-    public void setStatContext(JdbcStatContext context) {
-        contextLocal.set(context);
-    }
-
-    public JdbcStatContext createStatContext() {
-        return new JdbcStatContext();
-    }
-
-    public long generateSqlId() {
-        return sqlIdSeed.incrementAndGet();
-    }
-
-    public static JdbcStatManager getInstance() {
-        return instance;
-    }
-
-    public JdbcStatementStat getStatementStat() {
-        return statementStat;
-    }
-
-    public JdbcResultSetStat getResultSetStat() {
-        return resultSetStat;
-    }
-
-    public JdbcConnectionStat getConnectionStat() {
-        return connectionStat;
-    }
+    public JdbcStatContext getStatContext() { return contextLocal.get(); }
+    public void setStatContext(JdbcStatContext context) { contextLocal.set(context); }
+    public JdbcStatContext createStatContext() { return new JdbcStatContext(); }
+    public long generateSqlId() { return sqlIdSeed.incrementAndGet(); }
+    public JdbcStatementStat getStatementStat() { return statementStat; }
+    public JdbcResultSetStat getResultSetStat() { return resultSetStat; }
+    public JdbcConnectionStat getConnectionStat() { return connectionStat; }
 
     private static CompositeType COMPOSITE_TYPE = null;
-
     public static CompositeType getDataSourceCompositeType() throws JMException {
 
         if (COMPOSITE_TYPE != null) {

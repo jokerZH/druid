@@ -30,11 +30,12 @@ import com.alibaba.druid.support.logging.LogFactory;
 import com.alibaba.druid.util.JdbcUtils;
 import com.alibaba.druid.util.Utils;
 
+/* 存储一个filterName到FilterClassName的map */
 public class FilterManager {
 
     private final static Log                               LOG      = LogFactory.getLog(FilterManager.class);
 
-    private static final ConcurrentHashMap<String, String> aliasMap = new ConcurrentHashMap<String, String>(16, 0.75f, 1);
+    private static final ConcurrentHashMap<String/*filterName*/, String/*FilterClassName*/> aliasMap = new ConcurrentHashMap<String, String>(16, 0.75f, 1);
 
     static {
         try {
@@ -55,6 +56,7 @@ public class FilterManager {
         return aliasMap.get(alias);
     }
 
+    // 加载filter配置
     public static Properties loadFilterConfig() throws IOException {
         Properties filterProperties = new Properties();
 
@@ -66,6 +68,7 @@ public class FilterManager {
         return filterProperties;
     }
 
+    // 获得druid-filter.properties所有的配置
     private static void loadFilterConfig(Properties filterProperties, ClassLoader classLoader) throws IOException {
         if (classLoader == null) {
             return;
@@ -73,9 +76,7 @@ public class FilterManager {
         
         for (Enumeration<URL> e = classLoader.getResources("META-INF/druid-filter.properties"); e.hasMoreElements();) {
             URL url = e.nextElement();
-
             Properties property = new Properties();
-
             InputStream is = null;
             try {
                 is = url.openStream();
@@ -88,7 +89,8 @@ public class FilterManager {
         }
     }
 
-    public static void loadFilter(List<Filter> filters, String filterName) throws SQLException {
+    // 加载filter filterName能找到对应的类
+    public static void loadFilter(List<Filter> filters/*用于存放结果*/, String filterName) throws SQLException {
         if (filterName.length() == 0) {
             return;
         }

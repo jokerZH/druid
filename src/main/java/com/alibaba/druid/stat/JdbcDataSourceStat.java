@@ -40,41 +40,24 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class JdbcDataSourceStat implements JdbcDataSourceStatMBean {
-    private final static Log                                    LOG                     = LogFactory.getLog(JdbcDataSourceStat.class);
+    private final static Log LOG = LogFactory.getLog(JdbcDataSourceStat.class);
+    private final String name;
+    private final String url;
+    private String dbType;
 
-    private final String                                        name;
-    private final String                                        url;
-    private String                                              dbType;
+    private final JdbcConnectionStat connectionStat = new JdbcConnectionStat();
+    private final JdbcResultSetStat resultSetStat = new JdbcResultSetStat();
+    private final JdbcStatementStat statementStat = new JdbcStatementStat();
 
-    private final JdbcConnectionStat                            connectionStat          = new JdbcConnectionStat();
-    private final JdbcResultSetStat                             resultSetStat           = new JdbcResultSetStat();
-    private final JdbcStatementStat                             statementStat           = new JdbcStatementStat();
-
-    private int                                                 maxSqlSize              = 1000;
-
-    private ReentrantReadWriteLock                              lock                    = new ReentrantReadWriteLock();
-    private final LinkedHashMap<String, JdbcSqlStat>            sqlStatMap;
-
-    private final AtomicLong                                    skipSqlCount            = new AtomicLong();
-
-    private final Histogram                                     connectionHoldHistogram = new Histogram(new long[] { //
-                                                                                                        //
-            1, 10, 100, 1000, 10 * 1000, //
-            100 * 1000, 1000 * 1000
-                                                                                                        //
-                                                                                                        });
-
-    private final ConcurrentMap<Long, JdbcConnectionStat.Entry> connections             = new ConcurrentHashMap<Long, JdbcConnectionStat.Entry>(
-                                                                                                                                                16,
-                                                                                                                                                0.75f,
-                                                                                                                                                1);
-
+    private int maxSqlSize = 1000;
+    private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    private final LinkedHashMap<String, JdbcSqlStat> sqlStatMap;
+    private final AtomicLong skipSqlCount            = new AtomicLong();
+    private final Histogram connectionHoldHistogram = new Histogram(new long[] { 1, 10, 100, 1000, 10 * 1000, 100 * 1000, 1000 * 1000 });
+    private final ConcurrentMap<Long, JdbcConnectionEntry>      connections             = new ConcurrentHashMap<Long, JdbcConnectionEntry>(16, 0.75f, 1);
     private final AtomicLong                                    clobOpenCount           = new AtomicLong();
-
     private final AtomicLong                                    blobOpenCount           = new AtomicLong();
-
     private boolean                                             resetStatEnable         = true;
-
     private static JdbcDataSourceStat                           global;
 
     static {
@@ -88,33 +71,13 @@ public class JdbcDataSourceStat implements JdbcDataSourceStatMBean {
         global = new JdbcDataSourceStat("Global", "Global", dbType);
     }
 
-    public static JdbcDataSourceStat getGlobal() {
-        return global;
-    }
-
-    public static void setGlobal(JdbcDataSourceStat value) {
-        global = value;
-    }
-
-    public void configFromProperties(Properties properties) {
-
-    }
-
-    public boolean isResetStatEnable() {
-        return resetStatEnable;
-    }
-
-    public void setResetStatEnable(boolean resetStatEnable) {
-        this.resetStatEnable = resetStatEnable;
-    }
-
-    public JdbcDataSourceStat(String name, String url){
-        this(name, url, null);
-    }
-
-    public JdbcDataSourceStat(String name, String url, String dbType){
-        this(name, url, dbType, null);
-    }
+    public static JdbcDataSourceStat getGlobal() { return global; }
+    public static void setGlobal(JdbcDataSourceStat value) { global = value; }
+    public void configFromProperties(Properties properties) { }
+    public boolean isResetStatEnable() { return resetStatEnable; }
+    public void setResetStatEnable(boolean resetStatEnable) { this.resetStatEnable = resetStatEnable; }
+    public JdbcDataSourceStat(String name, String url){ this(name, url, null); }
+    public JdbcDataSourceStat(String name, String url, String dbType){ this(name, url, dbType, null); }
 
     @SuppressWarnings("serial")
     public JdbcDataSourceStat(String name, String url, String dbType, Properties connectProperties){

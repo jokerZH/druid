@@ -49,18 +49,16 @@ import com.alibaba.druid.util.Utils;
  * @author sandzhang<sandzhangtoo@gmail.com>
  */
 public final class DruidStatManagerFacade {
-
     private final static DruidStatManagerFacade instance    = new DruidStatManagerFacade();
     private boolean                             resetEnable = true;
     private final AtomicLong                    resetCount  = new AtomicLong();
 
-    private DruidStatManagerFacade(){
-    }
-
+    private DruidStatManagerFacade(){ }
     public static DruidStatManagerFacade getInstance() {
         return instance;
     }
 
+    /* 返回所有datasource */
     private Set<Object> getDruidDataSourceInstances() {
         return DruidDataSourceStatManager.getInstances().keySet();
     }

@@ -47,25 +47,18 @@ import com.alibaba.druid.util.Utils;
 import com.alibaba.druid.util.JMXUtils;
 import com.alibaba.druid.util.JdbcUtils;
 
-/**
- * @author wenshao<szujobs@hotmail.com>
- */
+/* jdbc驱动 */
 public class DruidDriver implements Driver, DruidDriverMBean {
-
     private static Log                                              LOG; // lazy init
 
     private final static DruidDriver                                instance                 = new DruidDriver();
 
-    private final static ConcurrentMap<String, DataSourceProxyImpl> proxyDataSources         = new ConcurrentHashMap<String, DataSourceProxyImpl>(16, 0.75f, 1);
+    // 缓存datasource
+    private final static ConcurrentMap<String/*url*/, DataSourceProxyImpl> proxyDataSources         = new ConcurrentHashMap<String, DataSourceProxyImpl>(16, 0.75f, 1);
     private final static AtomicInteger                              dataSourceIdSeed         = new AtomicInteger(0);
     private final static AtomicInteger                              sqlStatIdSeed            = new AtomicInteger(0);
 
     public final static String                                      DEFAULT_PREFIX           = "jdbc:wrap-jdbc:";
-    public final static String                                      DRIVER_PREFIX            = "driver=";
-    public final static String                                      PASSWORD_CALLBACK_PREFIX = "passwordCallback=";
-    public final static String                                      NAME_PREFIX              = "name=";
-    public final static String                                      JMX_PREFIX               = "jmx=";
-    public final static String                                      FILTERS_PREFIX           = "filters=";
 
     private final AtomicLong                                        connectCount             = new AtomicLong(0);
 
@@ -87,6 +80,7 @@ public class DruidDriver implements Driver, DruidDriverMBean {
         });
     }
 
+    // 注册druid的驱动
     public static boolean registerDriver(Driver driver) {
         try {
             DriverManager.registerDriver(driver);
@@ -117,21 +111,11 @@ public class DruidDriver implements Driver, DruidDriverMBean {
         return false;
     }
 
-    public DruidDriver(){
+    public DruidDriver(){ }
 
-    }
-
-    public static DruidDriver getInstance() {
-        return instance;
-    }
-
-    public static int createDataSourceId() {
-        return dataSourceIdSeed.incrementAndGet();
-    }
-
-    public static int createSqlStatId() {
-        return sqlStatIdSeed.incrementAndGet();
-    }
+    public static DruidDriver getInstance() { return instance; }
+    public static int createDataSourceId() { return dataSourceIdSeed.incrementAndGet(); }
+    public static int createSqlStatId() { return sqlStatIdSeed.incrementAndGet(); }
 
     @Override
     public boolean acceptsURL(String url) throws SQLException {
@@ -153,19 +137,14 @@ public class DruidDriver implements Driver, DruidDriverMBean {
         }
 
         connectCount.incrementAndGet();
-
         DataSourceProxyImpl dataSource = getDataSource(url, info);
-
         return dataSource.connect(info);
     }
 
     /**
-     * 参数定义： com.alibaba.druid.log.LogFilter=filter com.alibaba.druid.log.LogFilter.p1=prop-value
-     * com.alibaba.druid.log.LogFilter.p2=prop-value
-     * 
-     * @param url
-     * @return
-     * @throws SQLException
+     * 参数定义： com.alibaba.druid.log.LogFilter=filter
+     *          com.alibaba.druid.log.LogFilter.p1=prop-value
+     *          com.alibaba.druid.log.LogFilter.p2=prop-value
      */
     private DataSourceProxyImpl getDataSource(String url, Properties info) throws SQLException {
         DataSourceProxyImpl dataSource = proxyDataSources.get(url);
@@ -206,11 +185,18 @@ public class DruidDriver implements Driver, DruidDriverMBean {
         return dataSource;
     }
 
+    /**/
+    public final static String                                      DRIVER_PREFIX            = "driver=";
+    public final static String                                      PASSWORD_CALLBACK_PREFIX = "passwordCallback=";
+    public final static String                                      NAME_PREFIX              = "name=";
+    public final static String                                      JMX_PREFIX               = "jmx=";
+    public final static String                                      FILTERS_PREFIX           = "filters=";
     public static DataSourceProxyConfig parseConfig(String url, Properties info) throws SQLException {
         String restUrl = url.substring(DEFAULT_PREFIX.length());
 
         DataSourceProxyConfig config = new DataSourceProxyConfig();
 
+        // 解析正是driver名字
         if (restUrl.startsWith(DRIVER_PREFIX)) {
             int pos = restUrl.indexOf(':', DRIVER_PREFIX.length());
             String driverText = restUrl.substring(DRIVER_PREFIX.length(), pos);
@@ -220,6 +206,7 @@ public class DruidDriver implements Driver, DruidDriverMBean {
             restUrl = restUrl.substring(pos + 1);
         }
 
+        // 解析filter
         if (restUrl.startsWith(FILTERS_PREFIX)) {
             int pos = restUrl.indexOf(':', FILTERS_PREFIX.length());
             String filtersText = restUrl.substring(FILTERS_PREFIX.length(), pos);
@@ -229,6 +216,7 @@ public class DruidDriver implements Driver, DruidDriverMBean {
             restUrl = restUrl.substring(pos + 1);
         }
 
+        // 设置名字
         if (restUrl.startsWith(NAME_PREFIX)) {
             int pos = restUrl.indexOf(':', NAME_PREFIX.length());
             String name = restUrl.substring(NAME_PREFIX.length(), pos);
@@ -236,6 +224,7 @@ public class DruidDriver implements Driver, DruidDriverMBean {
             restUrl = restUrl.substring(pos + 1);
         }
 
+        // 是否使用jmx
         if (restUrl.startsWith(JMX_PREFIX)) {
             int pos = restUrl.indexOf(':', JMX_PREFIX.length());
             String jmxOption = restUrl.substring(JMX_PREFIX.length(), pos);
@@ -255,6 +244,7 @@ public class DruidDriver implements Driver, DruidDriverMBean {
         return config;
     }
 
+    // 根据driver名 创建实际使用的driver
     public Driver createDriver(String className) throws SQLException {
         Class<?> rawDriverClass = Utils.loadClass(className);
 

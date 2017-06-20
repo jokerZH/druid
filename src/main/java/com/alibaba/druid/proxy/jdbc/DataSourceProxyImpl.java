@@ -38,22 +38,16 @@ import com.alibaba.druid.stat.JdbcStatManager;
 import com.alibaba.druid.util.JdbcUtils;
 import com.alibaba.druid.util.Utils;
 
-/**
- * @author wenshao<szujobs@hotmail.com>
- */
+/* db DataSource */
 public class DataSourceProxyImpl implements DataSourceProxy, DataSourceProxyImplMBean {
-
-    private final Driver                rawDriver;
-
-    private final DataSourceProxyConfig config;
+    private final Driver                rawDriver;      // 实际使用的driver 如mysql driver
+    private final DataSourceProxyConfig config;         // datasource的配置
+    private String                      dbType;         // 后端类型
+    private final JdbcDataSourceStat    dataSourceStat; // 统计信息
 
     private long                        id;
-
     private final long                  createdTimeMillis = System.currentTimeMillis();
-
     private Properties                  properties;
-
-    private String                      dbType;
 
     private final AtomicLong            connectionIdSeed  = new AtomicLong(10000);
     private final AtomicLong            statementIdSeed   = new AtomicLong(20000);
@@ -61,7 +55,6 @@ public class DataSourceProxyImpl implements DataSourceProxy, DataSourceProxyImpl
     private final AtomicLong            metaDataIdSeed    = new AtomicLong(100000);
     private final AtomicLong            transactionIdSeed = new AtomicLong(0);
 
-    private final JdbcDataSourceStat    dataSourceStat;
 
     public DataSourceProxyImpl(Driver rawDriver, DataSourceProxyConfig config){
         super();
